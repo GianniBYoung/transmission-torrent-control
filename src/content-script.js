@@ -17,7 +17,8 @@ const listener = async (request) => {
             content: await response.blob(),
         };
     } catch (e) {
-        return e;
+        // Error objects don't survive message serialization
+        return {error: e.message};
     }
 };
 

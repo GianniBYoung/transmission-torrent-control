@@ -1,22 +1,24 @@
-# Agent Guide - Torrent Control (Transmission Edition)
+# Agent Guide - Transmission Torrent Control
 
-This browser extension is a slimmed-down version focusing strictly on the Transmission RPC API.
+Firefox extension (MV2) that sends torrent/magnet links to Transmission via its RPC API.
 
-## 🏗 Architecture & Data Flow
+## Architecture
 
-- **Manifest**: `src/manifest.json`.
-- **Background Script**: `src/index.js` handles link catching and context menus.
-- **Client Logic**: `src/lib/transmission.js` is the primary client. It supports multiple labels (passed as an array in the `labels` argument of `torrent-add`).
-- **Utilities**: `src/util.js` manages the `clientList` (Transmission only) and common URL logic.
+- `src/index.js`: background script. Builds the link context menu, handles clicks, adds torrents, opens the web UI from the toolbar button.
+- `src/lib/transmission.js`: RPC client. Sends Basic auth directly; retries once on 409 with the new `X-Transmission-Session-Id`.
+- `src/util.js`: flat options (`defaultOptions`), load/save, legacy `{globals, servers}` migration, import/export parsing, helpers.
+- `src/content-script.js`: fetches `.torrent` files inside the source tab so site cookies apply.
+- `src/view/options.*`: settings page, including import/export and label presets.
+- `src/view/popup.*`: toolbar popup for toggling labels/directory/paused. Middle-click on the icon is handled in `index.js` via `browserAction.onClicked`.
 
-## 🛠 Essential Commands
+## Commands
 
-- **Build**: `npm run build`
-- **Run**: `npm start`
-- **Test**: `npm test` (only `transmission.test.js` remains relevant)
+- Build: `npm run build`
+- Run: `npm start`
+- Test: `npm test`
 
-## 💡 Important Gotchas
+## Gotchas
 
-- **Transmission Multiple Labels**: This project specifically supports passing an array of labels to Transmission. Ensure any UI changes preserve the array format when multiple labels are selected.
-- **Magnet Interception**: Redirected through `https://torrent-control.invalid/*`.
-- **UI Scaling**: The "Add Torrent" dialog height is set to `450px` in `index.js` to ensure the multiple-select label box is visible.
+- Context menu selections (`selectedLabels`, `directory`, `addPaused`) are sticky and stored by value; `getActiveSelection` drops values no longer in the configured lists.
+- Every storage change rebuilds the menu; rebuilds are serialized through `menuQueue`.
+- Labels are sent to Transmission as the `labels` array.

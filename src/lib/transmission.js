@@ -1,172 +1,97 @@
-import BaseClient from './baseclient.js';
-import {base64Encode} from '../base64.js';
+import {base64Encode} from '../util.js';
 
-export default class TransmissionApi extends BaseClient {
+const SESSION_HEADER = 'X-Transmission-Session-Id';
 
-    constructor(serverSettings) {
-        super();
+export default class TransmissionApi {
 
-        this.settings = serverSettings;
+    constructor({hostname, username = '', password = ''}) {
+        this.hostname = hostname;
+        this.username = username;
+        this.password = password;
         this.session = null;
     }
 
     get rpcUrl() {
-        const {hostname} = this.settings;
+        if (this.hostname.endsWith('/rpc') || this.hostname.endsWith('/rpc/'))
+            return this.hostname;
 
-        if (hostname.endsWith('/rpc') || hostname.endsWith('/rpc/'))
-            return hostname;
-
-        return hostname + 'transmission/rpc';
+        return this.hostname + 'transmission/rpc';
     }
 
-    logIn() {
-        this._attachListeners();
+    get authHeader() {
+        if (!this.username && !this.password)
+            return null;
 
-        return new Promise((resolve, reject) => {
-            fetch(this.rpcUrl, {
-                method: 'POST',
-                headers: new Headers({
-                    'Content-Type': 'application/json'
-                }),
-                body: JSON.stringify({
-                    method: 'session-get'
-                })
-            })
-            .then((response) => {
-                if (response.status === 200)
-                    return response.json();
-                else if (response.status === 401)
-                    throw new Error(chrome.i18n.getMessage('loginError'));
-                else if (response.status === 409 && response.headers.has('X-Transmission-Session-Id'))
-                    return { result: 'success' };
-                else
-                    throw new Error(chrome.i18n.getMessage('apiError', response.status.toString() + ': ' + response.statusText));
-            })
-            .then((json) => {
-                if (json.result === 'success')
-                    resolve();
-                else
-                    throw new Error(chrome.i18n.getMessage('loginError'));
-            })
-            .catch((error) => reject(error));
+        // btoa only accepts latin1, so encode credentials as UTF-8 bytes first
+        const bytes = new TextEncoder().encode(this.username + ':' + this.password);
+
+        return 'Basic ' + btoa(String.fromCharCode(...bytes));
+    }
+
+    /**
+     * Sends an RPC request, retrying once with a fresh session id on 409.
+     */
+    async rpc(method, args = {}, retry = true) {
+        const headers = new Headers({'Content-Type': 'application/json'});
+
+        if (this.session)
+            headers.append(SESSION_HEADER, this.session);
+
+        if (this.authHeader)
+            headers.append('Authorization', this.authHeader);
+
+        const response = await fetch(this.rpcUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({method: method, arguments: args}),
         });
+
+        if (response.status === 409 && retry && response.headers.has(SESSION_HEADER)) {
+            this.session = response.headers.get(SESSION_HEADER);
+
+            return this.rpc(method, args, false);
+        }
+
+        if (response.status === 401)
+            throw new Error(chrome.i18n.getMessage('loginError'));
+
+        if (!response.ok)
+            throw new Error(chrome.i18n.getMessage('apiError', response.status.toString() + ': ' + response.statusText));
+
+        const json = await response.json();
+
+        if (json.result !== 'success')
+            throw new Error(chrome.i18n.getMessage('torrentAddError', json.result || ''));
+
+        return json.arguments;
     }
 
-    logOut() {
-        this.removeEventListeners();
-        this.session = null;
-
-        return Promise.resolve();
-    }
-
-    addTorrent(torrent, options = {}) {
-                return new Promise((resolve, reject) => {
-            base64Encode(torrent).then((base64torrent) => {
-                let request = {
-                    method: 'torrent-add',
-                    arguments: {
-                        metainfo: base64torrent
-                    }
-                };
-
-                if (options.paused)
-                    request.arguments.paused = options.paused;
-
-                if (options.path)
-                    request.arguments['download-dir'] = options.path;
-
-                if (options.label) {
-                    if (Array.isArray(options.label))
-                        request.arguments.labels = options.label;
-                    else
-                        request.arguments.labels = [options.label];
-                }
-
-                const headers = new Headers({
-                    'Content-Type': 'application/json'
-                });
-
-                if (this.session) {
-                    headers.append('X-Transmission-Session-Id', this.session);
-                }
-
-                return fetch(this.rpcUrl, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(request)
-                })
-                .then((response) => response.json())
-                .then((json) => {
-                    if (json.result === 'success')
-                        resolve();
-                    else
-                        throw new Error(chrome.i18n.getMessage('torrentAddError'));
-                })
-            }).catch((error) => reject(error));
+    async addTorrent(torrent, options = {}) {
+        return this.rpc('torrent-add', {
+            metainfo: await base64Encode(torrent),
+            ...this.buildArguments(options),
         });
     }
 
     addTorrentUrl(url, options = {}) {
-        return new Promise((resolve, reject) => {
-            let request = {
-                method: 'torrent-add',
-                arguments: {
-                    filename: url
-                }
-            };
-
-            if (options.paused)
-                request.arguments.paused = options.paused;
-
-            if (options.path)
-                request.arguments['download-dir'] = options.path;
-
-            if (options.label) {
-                if (Array.isArray(options.label))
-                    request.arguments.labels = options.label;
-                else
-                    request.arguments.labels = [options.label];
-            }
-
-            const headers = new Headers({
-                'Content-Type': 'application/json'
-            });
-
-            if (this.session) {
-                headers.append('X-Transmission-Session-Id', this.session);
-            }
-
-
-            fetch(this.rpcUrl, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(request)
-            })
-            .then((response) => response.json())
-            .then((json) => {
-                if (json.result === 'success')
-                    resolve();
-                else
-                    throw new Error(chrome.i18n.getMessage('torrentAddError'));
-            })
-            .catch((error) => reject(error));
+        return this.rpc('torrent-add', {
+            filename: url,
+            ...this.buildArguments(options),
         });
     }
 
-    _attachListeners() {
-        const {username, password} = this.settings;
+    buildArguments({paused, path, labels}) {
+        const args = {};
 
-        if (username !== '' && password !== '') {
-            this.addAuthRequiredListener(username, password);
-        }
+        if (paused)
+            args.paused = true;
 
-        this.addHeadersReceivedEventListener((details) => {
-            const sessionHeader = details.responseHeaders.find((header) => header.name.toLowerCase() === 'x-transmission-session-id');
+        if (path)
+            args['download-dir'] = path;
 
-            if (sessionHeader) {
-                this.session = sessionHeader.value;
-            }
-        });
+        if (labels && labels.length)
+            args.labels = labels;
+
+        return args;
     }
-
 }

@@ -1,148 +1,21 @@
 import {
-    clientList,
     loadOptions,
     saveOptions,
+    serializeOptions,
+    parseOptions,
+    parsePreset,
 } from '../util.js';
 
-var options;
-
 const saveButton = document.querySelector('#save-options');
-/** @type {HTMLSelectElement} */
-const defaultDirectorySelect = document.querySelector('#defaultDirectory');
+const importFile = document.querySelector('#import-file');
 
-/**
- * @param {string[]} directories
- */
-function refreshDefaultDirectorySelect(directories) {
-    const startingValue = defaultDirectorySelect.value;
+const splitLines = (value) => value.split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length);
 
-    for (let i = defaultDirectorySelect.options.length - 1; i >= 1; i--) {
-        defaultDirectorySelect.remove(i);
-    }
+const normalizeHostname = (value) => value.replace(/\s+/g, '').replace(/\/?$/, '/');
 
-    const cleanDirectories = directories
-        .map((directory) => directory.trim())
-        .filter((directory) => directory.length > 0);
-
-    for (const directory of cleanDirectories) {
-        let element = document.createElement('option');
-        element.setAttribute('value', directory);
-        element.textContent = directory;
-        defaultDirectorySelect.appendChild(element);
-    }
-
-    if (cleanDirectories.includes(startingValue)) {
-        defaultDirectorySelect.value = startingValue;
-    }
-}
-
-const persistOptions = () => {
-    options.globals.contextMenu = ~~document.querySelector('[name="contextmenu"]:checked').value;
-    options.globals.addPaused = document.querySelector('#addpaused').checked;
-    options.globals.addAdvanced = document.querySelector('#addadvanced').checked;
-    options.globals.enableNotifications = document.querySelector('#enablenotifications').checked;
-
-    const labels = document.querySelector('#labels').value.split(/\n/g) || [];
-    options.globals.labels = labels.map((label) => label.trim()).filter((label) => label.length);
-
-    const directories = document.querySelector('#directories').value.split(/\n/g) || [];
-
-    let clientOptions = {};
-    Array.from(document.querySelectorAll('*[id^="clientOptions"]')).forEach((element) => {
-        if (element.tagName.toLowerCase() === 'select') {
-            clientOptions[element.id.match(/\[(.+?)]$/)[1]] = element.value;
-        } else {
-            clientOptions[element.id.match(/\[(.+?)]$/)[1]] = element.checked;
-        }
-    });
-
-    let httpAuth = null;
-    if (document.querySelector('#httpAuth').checked) {
-        httpAuth = {
-            username: document.querySelector('#httpAuthUsername').value.trim(),
-            password: document.querySelector('#httpAuthPassword').value.trim()
-        };
-    }
-
-    options.servers[0] = {
-        application: document.querySelector('#application').value,
-        hostname: document.querySelector('#hostname').value.replace(/\s+/, '').replace(/\/?$/, '/'),
-        username: document.querySelector('#username').value,
-        password: document.querySelector('#password').value,
-        directories: directories.map((directory) => directory.trim()).filter((directory) => directory.length),
-        clientOptions: clientOptions,
-        httpAuth: httpAuth,
-        defaultDirectory: document.querySelector('#defaultDirectory').value || null,
-        defaultLabel: null,
-    };
-
-    saveOptions(options);
-
-    saveButton.setAttribute('disabled', 'true');
-}
-
-const restoreOptions = () => {
-    document.querySelectorAll('textarea, input, select:not(#server-list)').forEach((element) => {
-        element.addEventListener('input', () => {
-            saveButton.removeAttribute('disabled');
-        }, { passive: true });
-    });
-
-    document.querySelector('#labels').placeholder = 'Label\nAnother label'.replace(/\\n/g, '\n');
-    document.querySelector('#directories').placeholder = '/home/user/downloads\n/data/incomplete'.replace(/\\n/g, '\n');
-
-    document.querySelectorAll('[data-i18n]').forEach((element) => {
-        element.textContent = chrome.i18n.getMessage(element.getAttribute('data-i18n'));
-    });
-
-    loadOptions().then((newOptions) => {
-        options = newOptions;
-
-        document.querySelector('[name="contextmenu"][value="' + options.globals.contextMenu + '"]').checked = true;
-        document.querySelector('#addpaused').checked = options.globals.addPaused;
-        document.querySelector('#addadvanced').checked = options.globals.addAdvanced;
-        document.querySelector('#enablenotifications').checked = options.globals.enableNotifications;
-
-        document.querySelector('#labels').value = options.globals.labels.join('\n');
-
-        restoreServer();
-    });
-
-    saveButton.setAttribute('disabled', 'true');
-}
-
-const restoreServer = () => {
-    const server = options.servers[0];
-    options.globals.currentServer = 0;
-    saveOptions(options);
-
-    refreshDefaultDirectorySelect(server.directories);
-
-    document.querySelector('#application').value = server.application;
-    document.querySelector('#hostname').value = server.hostname;
-    document.querySelector('#username').value = server.username;
-    document.querySelector('#password').value = server.password;
-    document.querySelector('#directories').value = server.directories.join('\n');
-    document.querySelector('#defaultDirectory').value = server.defaultDirectory || '';
-
-    if (server.httpAuth) {
-        document.querySelector('#httpAuth').checked = true;
-        document.querySelector('#httpAuthUsername').disabled = false;
-        document.querySelector('#httpAuthUsername').value = server.httpAuth.username;
-        document.querySelector('#httpAuthPassword').disabled = false;
-        document.querySelector('#httpAuthPassword').value = server.httpAuth.password;
-    } else {
-        document.querySelector('#httpAuth').checked = false;
-        document.querySelector('#httpAuthUsername').disabled = true;
-        document.querySelector('#httpAuthUsername').value = '';
-        document.querySelector('#httpAuthPassword').disabled = true;
-        document.querySelector('#httpAuthPassword').value = '';
-    }
-
-    document.querySelector('#application').dispatchEvent(new Event('change'));
-}
-
-const validateUrl = (str) => {
+const isValidUrl = (str) => {
     try {
         new URL(str);
     } catch (e) {
@@ -151,56 +24,96 @@ const validateUrl = (str) => {
     return true;
 }
 
-document.querySelector('#httpAuth').addEventListener('change', (e) => {
-    document.querySelector('#httpAuthUsername').disabled = !e.currentTarget.checked;
-    document.querySelector('#httpAuthPassword').disabled = !e.currentTarget.checked;
-});
-document.querySelector('#directories').addEventListener('change', (e) => {
-    refreshDefaultDirectorySelect(e.currentTarget.value.split('\n'));
+const fillForm = (options) => {
+    document.querySelector('#hostname').value = options.hostname;
+    document.querySelector('#username').value = options.username;
+    document.querySelector('#password').value = options.password;
+    document.querySelector('#directories').value = options.directories.join('\n');
+    document.querySelector('#labels').value = options.labels.join('\n');
+    document.querySelector('#presets').value = options.presets.join('\n');
+    document.querySelector('#notifications').checked = options.notifications;
+
+    saveButton.setAttribute('disabled', 'true');
+}
+
+const readForm = () => ({
+    hostname: normalizeHostname(document.querySelector('#hostname').value),
+    username: document.querySelector('#username').value,
+    password: document.querySelector('#password').value,
+    directories: splitLines(document.querySelector('#directories').value),
+    labels: splitLines(document.querySelector('#labels').value),
+    presets: splitLines(document.querySelector('#presets').value)
+        .map((preset) => parsePreset(preset).join(', '))
+        .filter((preset) => preset.length),
+    notifications: document.querySelector('#notifications').checked,
 });
 
-document.addEventListener('DOMContentLoaded', restoreOptions);
-document.querySelector('#save-options').addEventListener('click', (e) => {
+const exportOptions = async () => {
+    const blob = new Blob([serializeOptions(await loadOptions())], {type: 'application/json'});
+    const link = document.createElement('a');
+
+    link.href = URL.createObjectURL(blob);
+    link.download = 'transmission-torrent-control-settings.json';
+    link.click();
+
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+const importOptions = async (file) => {
+    try {
+        const options = parseOptions(await file.text());
+
+        await saveOptions(options);
+        fillForm(await loadOptions());
+    } catch (e) {
+        alert(chrome.i18n.getMessage('importError', e.message));
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-i18n]').forEach((element) => {
+        element.textContent = chrome.i18n.getMessage(element.getAttribute('data-i18n'));
+    });
+
+    document.querySelectorAll('textarea, input').forEach((element) => {
+        element.addEventListener('input', () => saveButton.removeAttribute('disabled'), {passive: true});
+    });
+
+    loadOptions().then(fillForm);
+});
+
+document.querySelector('#hostname').addEventListener('input', (e) => {
+    e.target.style.borderColor = isValidUrl(normalizeHostname(e.target.value)) ? '' : 'red';
+});
+
+saveButton.addEventListener('click', (e) => {
     e.preventDefault();
 
-    const hostname = document.querySelector('#hostname').value.replace(/\s+/, '').replace(/\/?$/, '/');
+    const options = readForm();
 
-    if (validateUrl(hostname)) {
-        persistOptions();
-    } else {
-        alert('Server address is invalid');
+    if (!isValidUrl(options.hostname)) {
+        alert(chrome.i18n.getMessage('invalidAddressError'));
+
+        return;
     }
+
+    saveOptions(options);
+    saveButton.setAttribute('disabled', 'true');
 });
-document.querySelector('#application').addEventListener('change', (e) => {
-    const client = clientList[0];
 
-    if (client) {
-        document.querySelector('#hostname').setAttribute('placeholder', client.addressPlaceholder);
-
-        const currentAddress = document.querySelector('#hostname').value;
-
-        if (currentAddress === '' || (client.addressPlaceholder === currentAddress))
-            document.querySelector('#hostname').value = client.addressPlaceholder;
-
-        document.querySelector('[data-panel="directories"]').style.display = 'flex';
-        document.querySelector('[data-panel="defaultDirectory"]').style.display = 'flex';
-
-        document.querySelector('[data-panel="labels"]').style.display = 'flex';
-
-        document.querySelector('[data-panel="httpAuth"]').style.display = 'none';
-
-        document.querySelector('#username').removeAttribute('disabled');
-
-        let clientOptionsPanel = document.querySelector('[data-panel="clientOptions"]');
-        Array.from(clientOptionsPanel.childNodes).forEach((element) =>
-            element.parentNode.removeChild(element));
-    }
+document.querySelector('#export-options').addEventListener('click', (e) => {
+    e.preventDefault();
+    exportOptions();
 });
-document.querySelector('#hostname').addEventListener('input', (e) => {
-    const hostname = e.target.value.replace(/\s+/, '').replace(/\/?$/, '/');
 
-    if (validateUrl(hostname))
-        document.querySelector('#hostname').setAttribute('style', '');
-    else
-        document.querySelector('#hostname').setAttribute('style', 'border-color:red;');
+document.querySelector('#import-options').addEventListener('click', (e) => {
+    e.preventDefault();
+    importFile.click();
+});
+
+importFile.addEventListener('change', () => {
+    if (importFile.files.length)
+        importOptions(importFile.files[0]);
+
+    importFile.value = '';
 });

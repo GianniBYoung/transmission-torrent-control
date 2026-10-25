@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        :root {
+            --bg: #fff;
+            --fg: #15141a;
+            --muted: #5b5b66;
+            --border: #cfcfd8;
+            --hover: #f0f0f4;
+            --accent: #0061e0;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #2b2a33;
+                --fg: #fbfbfe;
+                --muted: #bfbfc9;
+                --border: #52525e;
+                --hover: #3a3944;
+                --accent: #00ddff;
+            }
+        }
+        body {
+            margin: 0;
+            min-width: 240px;
+            max-width: 320px;
+            background: var(--bg);
+            color: var(--fg);
+            font: menu;
+        }
+        section {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        h2 {
+            display: flex;
+            justify-content: space-between;
+            margin: 0;
+            padding: 2px 12px 4px;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        h2 button {
+            border: 0;
+            background: none;
+            color: var(--accent);
+            font: inherit;
+            text-transform: none;
+            cursor: pointer;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 12px;
+            cursor: pointer;
+        }
+        label:hover {
+            background: var(--hover);
+        }
+        .empty {
+            padding: 4px 12px;
+            color: var(--muted);
+        }
+        footer {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+        }
+        footer button {
+            flex: 1;
+            padding: 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg);
+            color: var(--fg);
+            font: inherit;
+            cursor: pointer;
+        }
+        footer button:hover {
+            background: var(--hover);
+        }
+    </style>
+</head>
+<body>
+
+<div id="configured" hidden>
+    <section>
+        <h2><span data-i18n="labelsMenu"></span><button id="clear-labels" data-i18n="clearAction"></button></h2>
+        <div id="labels"></div>
+    </section>
+
+    <section id="directories-section">
+        <h2><span data-i18n="directoryMenu"></span></h2>
+        <div id="directories"></div>
+    </section>
+
+    <section>
+        <label><input type="checkbox" id="add-paused"><span data-i18n="addPausedOption"></span></label>
+    </section>
+</div>
+
+<div id="unconfigured" class="empty" data-i18n="notConfiguredText" hidden></div>
+
+<footer>
+    <button id="open-webui" data-i18n="openWebUiAction"></button>
+    <button id="open-settings" data-i18n="settingsAction"></button>
+</footer>
+
+<script type="module" src="popup.js"></script>
+
+</body>
+</html>

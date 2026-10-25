@@ -9,63 +9,13 @@
 <section class="panel">
 
     <div class="panel-section panel-section-header">
-        <span class="text-section-header" data-i18n="addonConfigurationTitle"></span>
-    </div>
-
-    <div class="panel-section panel-section-formElements">
-        <div class="panel-formElements-item browser-style">
-            <label data-i18n="contextMenuOption"></label>
-
-            <input type="radio" name="contextmenu" value="1" id="contextmenuDefault">
-            <label data-i18n="contextMenuDefaultOption" for="contextmenuDefault"></label>
-
-            <input type="radio" name="contextmenu" value="2" id="contextmenuSimple">
-            <label data-i18n="contextMenuSimpleOption" for="contextmenuSimple"></label>
-        </div>
-
-        <div class="panel-formElements-item browser-style">
-            <input type="checkbox" id="addpaused" />
-            <label for="addpaused" data-i18n="addPausedOption"></label>
-        </div>
-
-        <div class="panel-formElements-item browser-style">
-            <input type="checkbox" id="addadvanced" />
-            <label for="addadvanced" data-i18n="addAdvancedOption"></label>
-        </div>
-
-        <div class="panel-formElements-item browser-style">
-            <input type="checkbox" id="enablenotifications" />
-            <label for="enablenotifications" data-i18n="enableNotificationsOption"></label>
-        </div>
-
-        <div class="panel-formElements-item browser-style" style="align-items:flex-start;flex-direction:column" data-panel="labels">
-            <label for="labels" data-i18n="torrentLabelsOption"></label>
-            <textarea id="labels" class="browser-style" style="width:100%"></textarea>
-        </div>
-
-    </div>
-
-</section>
-
-
-<section class="panel">
-
-    <div class="panel-section panel-section-header">
         <span class="text-section-header" data-i18n="serverConfigurationTitle"></span>
     </div>
 
     <div class="panel-section panel-section-formElements">
-
-        <div class="panel-formElements-item browser-style" style="display:none">
-            <label for="application" data-i18n="bittorrentClientOption"></label>
-            <select id="application" class="browser-style">
-                <option value="transmission">Transmission</option>
-            </select>
-        </div>
-
         <div class="panel-formElements-item browser-style">
             <label for="hostname" data-i18n="serverAddressOption"></label>
-            <input type="text" id="hostname" />
+            <input type="text" id="hostname" placeholder="http://127.0.0.1:9091/" />
         </div>
 
         <div class="panel-formElements-item browser-style">
@@ -78,41 +28,44 @@
             <input type="password" id="password" />
         </div>
 
-        <div class="panel-section panel-section-formElements" data-panel="httpAuth">
-            <div class="panel-formElements-item browser-style">
-                <input type="checkbox" id="httpAuth" />
-                <label for="httpAuth" data-i18n="httpAuthOption"></label>
-            </div>
-
-            <div class="panel-formElements-item browser-style">
-                <label for="httpAuthUsername" data-i18n="usernameOption"></label>
-                <input type="text" id="httpAuthUsername" />
-            </div>
-            <div class="panel-formElements-item browser-style">
-                <label for="httpAuthPassword" data-i18n="passwordOption"></label>
-                <input type="password" id="httpAuthPassword" />
-            </div>
-        </div>
-
-        <div class="panel-section-formElements" data-panel="clientOptions"></div>
-
-        <div class="panel-formElements-item browser-style" style="align-items:flex-start;flex-direction:column" data-panel="directories">
+        <div class="panel-formElements-item browser-style" style="align-items:flex-start;flex-direction:column">
             <label for="directories" data-i18n="serverDirectoriesOption"></label>
-            <textarea id="directories" rows="5" class="browser-style" style="width:100%"></textarea>
+            <textarea id="directories" rows="5" class="browser-style" style="width:100%" placeholder="/home/user/downloads&#10;/data/incomplete"></textarea>
         </div>
 
-        <div class="panel-formElements-item browser-style" data-panel="defaultDirectory">
-            <label for="defaultDirectory" data-i18n="serverDefaultDirectoryOption"></label>
-            <select id="defaultDirectory" class="browser-style">
-                <option data-i18n="noneOption" value=""></option>
-            </select>
+        <div class="panel-formElements-item browser-style" style="align-items:flex-start;flex-direction:column">
+            <label for="labels" data-i18n="torrentLabelsOption"></label>
+            <textarea id="labels" rows="5" class="browser-style" style="width:100%" placeholder="Label&#10;Another label"></textarea>
+        </div>
+
+        <div class="panel-formElements-item browser-style" style="align-items:flex-start;flex-direction:column">
+            <label for="presets" data-i18n="labelPresetsOption"></label>
+            <textarea id="presets" rows="3" class="browser-style" style="width:100%" placeholder="movies, 4k&#10;tv, anime"></textarea>
+        </div>
+    </div>
+
+</section>
+
+<section class="panel">
+
+    <div class="panel-section panel-section-header">
+        <span class="text-section-header" data-i18n="addonConfigurationTitle"></span>
+    </div>
+
+    <div class="panel-section panel-section-formElements">
+        <div class="panel-formElements-item browser-style">
+            <input type="checkbox" id="notifications" />
+            <label for="notifications" data-i18n="enableNotificationsOption"></label>
         </div>
     </div>
 
 </section>
 
 <div class="panel-formElements-item">
-    <button id="save-options" class="browser-style default disabled" data-i18n="saveAction" style="margin:0 16px 0 16px"></button>
+    <button id="save-options" class="browser-style default" data-i18n="saveAction" style="margin:0 16px 0 16px"></button>
+    <button id="export-options" class="browser-style" data-i18n="exportAction"></button>
+    <button id="import-options" class="browser-style" data-i18n="importAction" style="margin-left:8px"></button>
+    <input type="file" id="import-file" accept="application/json,.json" hidden />
 </div>
 
 <script type="module" src="options.js"></script>

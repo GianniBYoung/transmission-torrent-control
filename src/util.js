@@ -1,51 +1,92 @@
-import TransmissionApi from './lib/transmission.js';
+export const defaultOptions = () => ({
+    hostname: '',
+    username: '',
+    password: '',
+    labels: [],
+    directories: [],
+    // Label combinations, one comma-separated string each
+    presets: [],
+    // Sticky context menu selections
+    selectedLabels: [],
+    directory: null,
+    addPaused: false,
+    notifications: true,
+});
 
-export const clientList = [
-    {
-        id: 'transmission',
-        name: 'Transmission',
-        addressPlaceholder: 'http://127.0.0.1:9091/',
-        clientCapabilities: ['paused', 'label', 'path', 'httpAuth']
-    }
-];
+const optionKeys = Object.keys(defaultOptions());
 
-export const getClient = (serverSettings) => {
-    return new TransmissionApi(serverSettings);
+// Converts the old {globals, servers: [...]} layout to the flat one
+const migrateLegacyOptions = (stored) => {
+    const globals = stored.globals || {};
+    const server = (stored.servers && stored.servers[0]) || {};
+    const defaultLabel = server.defaultLabel;
+
+    return {
+        hostname: server.hostname,
+        username: server.username,
+        password: server.password,
+        labels: globals.labels,
+        directories: server.directories,
+        selectedLabels: Array.isArray(defaultLabel) ? defaultLabel : (defaultLabel ? [defaultLabel] : undefined),
+        directory: server.defaultDirectory,
+        addPaused: globals.addPaused,
+        notifications: globals.enableNotifications,
+    };
+}
+
+const isValidValue = (value, defaultValue) => {
+    if (Array.isArray(defaultValue))
+        return Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+    // Only `directory` defaults to null, and it holds a string
+    if (defaultValue === null)
+        return typeof value === 'string';
+
+    return typeof value === typeof defaultValue;
+}
+
+/**
+ * Fills in defaults and drops unknown or wrongly typed keys. Accepts the legacy layout too.
+ */
+export const normalizeOptions = (source) => {
+    const options = defaultOptions();
+    const flat = source.servers ? migrateLegacyOptions(source) : source;
+
+    optionKeys.forEach((key) => {
+        if (isValidValue(flat[key], options[key]))
+            options[key] = flat[key];
+    });
+
+    return options;
+}
+
+export const serializeOptions = (options) => {
+    return JSON.stringify(normalizeOptions(options), null, 2);
+}
+
+export const parseOptions = (text) => {
+    const parsed = JSON.parse(text);
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        throw new Error('Not a settings object');
+
+    if (!parsed.servers && !optionKeys.some((key) => key in parsed))
+        throw new Error('No known settings found');
+
+    return normalizeOptions(parsed);
 }
 
 export const loadOptions = () => {
-    const defaults = {
-        globals: {
-            addPaused: false,
-            addAdvanced: false,
-            contextMenu: 1,
-            enableNotifications: true,
-            labels: []
-        },
-        servers: [
-            {
-                name: 'Default',
-                application: 'transmission',
-                hostname: '',
-                username: '',
-                password: '',
-                directories: [],
-                clientOptions: {},
-                httpAuth: null,
-                defaultLabel: null,
-                defaultDirectory: null,
-            }
-        ]
-    };
-
     return new Promise((resolve) => {
-        chrome.storage.local.get(['globals', 'servers'], (options) => {
-            mergeObjects(defaults, options);
-            // Ensure only one server exists
-            if (defaults.servers.length > 1) {
-                defaults.servers = [defaults.servers[0]];
+        chrome.storage.local.get(null, (stored) => {
+            const options = normalizeOptions(stored || {});
+
+            if (stored && stored.servers) {
+                chrome.storage.local.remove(['globals', 'servers']);
+                chrome.storage.local.set(options);
             }
-            resolve(defaults);
+
+            resolve(options);
         });
     });
 }
@@ -54,8 +95,23 @@ export const saveOptions = (options) => {
     return chrome.storage.local.set(options);
 }
 
+/**
+ * Selections are stored by value, so drop any that no longer exist in the options.
+ */
+export const getActiveSelection = (options) => ({
+    labels: options.selectedLabels.filter((label) => options.labels.includes(label)),
+    path: options.directories.includes(options.directory) ? options.directory : null,
+    paused: options.addPaused,
+});
+
+export const parsePreset = (preset) => {
+    return preset.split(',')
+        .map((label) => label.trim())
+        .filter((label) => label.length);
+}
+
 export const isMagnetUrl = (url) => {
-    return !!url.match(/^magnet:/);
+    return url.startsWith('magnet:');
 }
 
 export const getMagnetUrlName = (url) => {
@@ -92,13 +148,13 @@ export const getTorrentName = (data) => {
     });
 }
 
-const mergeObjects = (target, source) => {
-    const isObject = obj => obj && typeof obj === 'object';
-
-    Object.keys(source).forEach((key) =>
-        isObject(target) && target.hasOwnProperty(key) && isObject(target[key]) ?
-            mergeObjects(target[key], source[key]) : target[key] = source[key]
-    );
+export const base64Encode = (data) => {
+    return new Promise((resolve, reject) => {
+        let reader = new FileReader();
+        reader.onerror = (error) => reject(error);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(data);
+    });
 }
 
 export const getHostFilter = (hostname) => {

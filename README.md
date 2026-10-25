@@ -1,12 +1,16 @@
-# Torrent Control (Transmission Edition)
+# Transmission Torrent Control
 
 Add torrent and magnet links directly to your Transmission Bittorrent client.
 
 ## Features
-- Supports magnet links
-- Supports private trackers
-- Supports multiple labels (hold `Ctrl`/`Cmd` to select multiple)
-- Auto login using HTTP auth / Digest authentication
+- Right-click any torrent or magnet link → **Add torrent**, using the current label/directory/paused selection (shown in the menu entry)
+- **Toolbar popup** (left click): toggle labels, download directory and "add paused" in one place
+- **Middle-click** the toolbar icon to open the Transmission web UI (HTTP auth answered automatically)
+- **Label presets**: define combos like `movies, 4k` in settings to get one-click "Add as movies + 4k" menu entries
+- Labels/directory/paused can also be toggled from the context menu itself
+- Torrent files are fetched from the source tab, so private tracker cookies work
+- Import/export settings as JSON (includes your password)
+
 ---
 
 ## Development
@@ -19,7 +23,7 @@ Add torrent and magnet links directly to your Transmission Bittorrent client.
 1. Clone the repository and install dependencies:
 
    ```bash
-   git clone https://github.com/Mika-/torrent-control.git
+   git clone https://github.com/GianniBYoung/torrent-control.git
    cd torrent-control
    npm install
    ```

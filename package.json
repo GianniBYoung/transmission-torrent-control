@@ -1,7 +1,7 @@
 {
-  "name": "torrent-control",
+  "name": "transmission-torrent-control",
   "version": "0.1.0",
-  "repository": "git@github.com:Mika-/torrent-control.git",
+  "repository": "git@github.com:GianniBYoung/torrent-control.git",
   "license": "MIT",
   "type": "module",
   "scripts": {
