@@ -1,6 +1,8 @@
 # Transmission Torrent Control
 
-Add torrent and magnet links directly to your Transmission Bittorrent client.
+Send torrent and magnet links to your [Transmission](https://transmissionbt.com/) BitTorrent client, with multi-label selection and presets.
+
+Based on [Torrent Control](https://github.com/Mika-/torrent-control) by Mika-.
 
 ## Features
 - Right-click any torrent or magnet link → **Add torrent**, using the current label/directory/paused selection (shown in the menu entry)
@@ -10,6 +12,14 @@ Add torrent and magnet links directly to your Transmission Bittorrent client.
 - Labels/directory/paused can also be toggled from the context menu itself
 - Torrent files are fetched from the source tab, so private tracker cookies work
 - Import/export settings as JSON (includes your password)
+
+## Installation
+Install from [Firefox Add-ons](https://addons.mozilla.org/) (requires Firefox 140+ or a Firefox-based browser such as Zen).
+
+Then open the extension's settings, enter your Transmission address (e.g. `http://127.0.0.1:9091/`) and credentials, and add your labels and download directories. Labels require Transmission 4.0+.
+
+## Privacy
+Settings, including your Transmission password, are stored only in the browser's local extension storage. Nothing is collected or sent anywhere except to the Transmission server you configure.
 
 ---
 
@@ -23,8 +33,8 @@ Add torrent and magnet links directly to your Transmission Bittorrent client.
 1. Clone the repository and install dependencies:
 
    ```bash
-   git clone https://github.com/GianniBYoung/torrent-control.git
-   cd torrent-control
+   git clone https://github.com/GianniBYoung/transmission-torrent-control.git
+   cd transmission-torrent-control
    npm install
    ```
 
@@ -34,15 +44,15 @@ Add torrent and magnet links directly to your Transmission Bittorrent client.
    npm start
    ```
 
-### Manual Installation (Firefox/Zen)
-1. Open your browser and navigate to `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on...**.
-3. Select the `src/manifest.json` file.
+### Loading a development build (Firefox/Zen)
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on...** and select `src/manifest.json`.
 
-### Permanent Installation (Zen/Firefox Dev Edition)
-1. Build the extension: `npm run build`.
-2. Locate the `.zip` file in `web-ext-artifacts/` and rename it to `.xpi`.
-3. In your browser, go to `about:config` and set `xpinstall.signatures.required` to `false`.
-4. Go to `about:addons`.
-5. Click the gear icon and select **Install Add-on From File...**.
-6. Select your `.xpi` file.
+Flatpak browsers only receive the single selected file through the file portal, so the extension fails to load. Either set `widget.use-xdg-desktop-portal.file-picker` to `0` in `about:config` (and grant the browser access to the project folder with `flatpak override`), or load the zip produced by `npm run build`.
+
+### Testing and packaging
+- `npm test` runs the unit tests.
+- `npm run build` writes the zip to upload to AMO into `web-ext-artifacts/`.
+
+## License
+MIT. See [LICENSE](LICENSE).
