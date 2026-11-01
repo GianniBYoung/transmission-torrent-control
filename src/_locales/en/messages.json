@@ -97,5 +97,8 @@
   },
   "catchTorrentsOption": {
     "message": "Send clicked .torrent files to Transmission"
+  },
+  "clearLabelsAction": {
+    "message": "Clear labels"
   }
 }

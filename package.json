@@ -9,7 +9,7 @@
   "scripts": {
     "start": "web-ext run --source-dir ./src/",
     "startdev": "web-ext run --firefox=firefoxdeveloperedition --source-dir ./src/",
-    "build": "web-ext build --source-dir ./src/",
+    "build": "web-ext build --overwrite-dest --source-dir ./src/",
     "test": "mocha --require ./test/env.js --recursive"
   },
   "devDependencies": {

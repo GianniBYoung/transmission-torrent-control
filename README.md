@@ -10,7 +10,7 @@ Based on [Torrent Control](https://github.com/Mika-/torrent-control) by Mika-.
 - **Toolbar popup** (left click): toggle labels, download directory and "add paused" in one place
 - **Middle-click** the toolbar icon to open the Transmission web UI (HTTP auth answered automatically)
 - **Label presets**: define combos like `movies, 4k` in settings to get one-click "Add as movies + 4k" menu entries
-- Labels/directory/paused can also be toggled from the context menu itself
+- Labels/directory/paused can also be toggled from the context menu itself; **Clear labels** (context menu or popup) deselects all labels
 - Torrent files are fetched from the source tab, so private tracker cookies work
 - Import/export settings as JSON (includes your password)
 

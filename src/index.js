@@ -46,6 +46,17 @@ export const buildMenuItems = (options) => {
             id: 'labels',
             title: chrome.i18n.getMessage('labelsMenu'),
             contexts: ['link'],
+        }, {
+            id: 'clear-labels',
+            parentId: 'labels',
+            title: chrome.i18n.getMessage('clearLabelsAction'),
+            enabled: labels.length > 0,
+            contexts: ['link'],
+        }, {
+            id: 'labels-separator',
+            parentId: 'labels',
+            type: 'separator',
+            contexts: ['link'],
         });
 
         options.labels.forEach((label, i) => items.push({
@@ -123,6 +134,8 @@ const handleMenuClick = (info, tab) => {
             selected.push(label);
 
         saveOptions({selectedLabels: selected});
+    } else if (id === 'clear-labels') {
+        saveOptions({selectedLabels: []});
     } else if (id === 'directory-default') {
         saveOptions({directory: null});
     } else if (directoryId) {

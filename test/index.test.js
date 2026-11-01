@@ -136,6 +136,13 @@ describe('Context menu', () => {
         expect(byId['add-paused']).to.include({type: 'checkbox', checked: true});
     });
 
+    it('Clear labels is disabled when nothing is selected', () => {
+        const clear = (opts) => buildMenuItems(opts).find((item) => item.id === 'clear-labels');
+
+        expect(clear(options)).to.include({enabled: true, parentId: 'labels'});
+        expect(clear({...options, selectedLabels: ['deleted-label']}).enabled).to.equal(false);
+    });
+
     it('Adds a menu item per preset', () => {
         const presets = buildMenuItems(options).filter((item) => item.id.startsWith('preset-'));
 
