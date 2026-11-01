@@ -11,6 +11,8 @@ export const defaultOptions = () => ({
     directory: null,
     addPaused: false,
     notifications: true,
+    // Send clicked .torrent downloads to Transmission instead of saving them
+    catchTorrents: true,
 });
 
 const optionKeys = Object.keys(defaultOptions());
@@ -112,6 +114,32 @@ export const parsePreset = (preset) => {
 
 export const isMagnetUrl = (url) => {
     return url.startsWith('magnet:');
+}
+
+/**
+ * Extracts the magnet link from a protocol handler URL like https://torrent-control.invalid/magnet%3A...
+ */
+export const getHandlerMagnetUrl = (url) => {
+    const magnetUrl = decodeURIComponent(new URL(url).pathname.substring(1));
+
+    return isMagnetUrl(magnetUrl) ? magnetUrl : null;
+}
+
+const getHeader = (headers, name) => {
+    const header = (headers || []).find((h) => h.name.toLowerCase() === name);
+
+    return header ? header.value : '';
+}
+
+/**
+ * @param details webRequest.onHeadersReceived details
+ */
+export const isTorrentResponse = (details) => {
+    const contentType = getHeader(details.responseHeaders, 'content-type');
+    const disposition = getHeader(details.responseHeaders, 'content-disposition');
+
+    return /application\/x-bittorrent/i.test(contentType)
+        || /filename\*?=[^;]*\.torrent["']?\s*(;|$)/i.test(disposition);
 }
 
 export const getMagnetUrlName = (url) => {

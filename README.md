@@ -5,6 +5,7 @@ Send torrent and magnet links to your [Transmission](https://transmissionbt.com/
 Based on [Torrent Control](https://github.com/Mika-/torrent-control) by Mika-.
 
 ## Features
+- **Click to add**: clicking a magnet link or a `.torrent` download sends it straight to Transmission with the currently selected labels/directory/paused
 - Right-click any torrent or magnet link → **Add torrent**, using the current label/directory/paused selection (shown in the menu entry)
 - **Toolbar popup** (left click): toggle labels, download directory and "add paused" in one place
 - **Middle-click** the toolbar icon to open the Transmission web UI (HTTP auth answered automatically)
@@ -17,6 +18,8 @@ Based on [Torrent Control](https://github.com/Mika-/torrent-control) by Mika-.
 Install from [Firefox Add-ons](https://addons.mozilla.org/) (requires Firefox 140+ or a Firefox-based browser such as Zen).
 
 Then open the extension's settings, enter your Transmission address (e.g. `http://127.0.0.1:9091/`) and credentials, and add your labels and download directories. Labels require Transmission 4.0+.
+
+To handle magnet links, click one and pick **Transmission Torrent Control** when Firefox asks, or set it under Settings → General → Applications → `magnet`. Clicked `.torrent` downloads are caught automatically; turn this off in the extension settings if you want to save them instead.
 
 ## Privacy
 Settings, including your Transmission password, are stored only in the browser's local extension storage. Nothing is collected or sent anywhere except to the Transmission server you configure.

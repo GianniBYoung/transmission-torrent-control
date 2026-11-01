@@ -3,6 +3,8 @@ import {
     getHostFilter,
     getTorrentName,
     getMagnetUrlName,
+    getHandlerMagnetUrl,
+    isTorrentResponse,
     parsePreset,
 } from '../src/util.js';
 
@@ -45,5 +47,26 @@ describe('Test helpers', () => {
         ];
 
         testCases.forEach(([hostname, result]) => expect(getHostFilter(hostname)).to.equal(result));
+    });
+});
+
+describe('Link handling', () => {
+    it('Extracts magnet from protocol handler URL', () => {
+        const magnet = 'magnet:?xt=urn:btih:abc&dn=Ubuntu%20ISO';
+
+        expect(getHandlerMagnetUrl('https://torrent-control.invalid/' + encodeURIComponent(magnet))).to.equal(magnet);
+        expect(getHandlerMagnetUrl('https://torrent-control.invalid/foo')).to.equal(null);
+    });
+
+    it('Detects torrent responses', () => {
+        const details = (headers) => ({
+            responseHeaders: Object.entries(headers).map(([name, value]) => ({name, value})),
+        });
+
+        expect(isTorrentResponse(details({'Content-Type': 'application/x-bittorrent'}))).to.be.true;
+        expect(isTorrentResponse(details({'content-type': 'application/octet-stream', 'Content-Disposition': 'attachment; filename="ubuntu.torrent"'}))).to.be.true;
+        expect(isTorrentResponse(details({'Content-Disposition': "attachment; filename*=UTF-8''ubuntu.torrent"}))).to.be.true;
+        expect(isTorrentResponse(details({'Content-Type': 'text/html'}))).to.be.false;
+        expect(isTorrentResponse(details({'Content-Disposition': 'attachment; filename="ubuntu.torrent.txt"'}))).to.be.false;
     });
 });

@@ -1,6 +1,6 @@
 {
   "name": "transmission-torrent-control",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Send torrent and magnet links to Transmission, with multi-label selection and presets.",
   "author": "Gianni Young",
   "repository": "git@github.com:GianniBYoung/transmission-torrent-control.git",

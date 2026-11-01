@@ -32,6 +32,7 @@ const fillForm = (options) => {
     document.querySelector('#labels').value = options.labels.join('\n');
     document.querySelector('#presets').value = options.presets.join('\n');
     document.querySelector('#notifications').checked = options.notifications;
+    document.querySelector('#catch-torrents').checked = options.catchTorrents;
 
     saveButton.setAttribute('disabled', 'true');
 }
@@ -46,6 +47,7 @@ const readForm = () => ({
         .map((preset) => parsePreset(preset).join(', '))
         .filter((preset) => preset.length),
     notifications: document.querySelector('#notifications').checked,
+    catchTorrents: document.querySelector('#catch-torrents').checked,
 });
 
 const exportOptions = async () => {

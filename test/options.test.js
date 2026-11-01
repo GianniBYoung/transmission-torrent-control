@@ -17,6 +17,7 @@ const customOptions = {
     directory: '/data/movies',
     addPaused: true,
     notifications: false,
+    catchTorrents: false,
 };
 
 describe('Options', () => {
@@ -72,7 +73,7 @@ describe('Options', () => {
             }],
         });
 
-        const migrated = {...customOptions, presets: []};
+        const migrated = {...customOptions, presets: [], catchTorrents: true};
 
         expect(await loadOptions()).to.deep.equal(migrated);
         expect(chrome.storage.local.remove.calledOnceWith(['globals', 'servers'])).to.be.true;

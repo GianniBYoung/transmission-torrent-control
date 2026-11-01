@@ -6,6 +6,8 @@ import {
     getHostFilter,
     getTorrentName,
     getMagnetUrlName,
+    getHandlerMagnetUrl,
+    isTorrentResponse,
     parsePreset,
     getActiveSelection,
 } from './util.js';
@@ -161,37 +163,91 @@ const addTorrent = async (url, tabId, labels = null) => {
     }
 }
 
+const readTorrentResponse = async (response) => {
+    if (!response)
+        throw new Error(chrome.i18n.getMessage('torrentFetchError', 'No response from page'));
+
+    if (response.error)
+        throw new Error(response.error);
+
+    if (!response.ok)
+        throw new Error(chrome.i18n.getMessage('torrentFetchError', response.status.toString() + ': ' + response.statusText));
+
+    if (response.content.type !== '' && !response.content.type.match(/(application\/x-bittorrent|application\/octet-stream)/gi))
+        throw new Error(chrome.i18n.getMessage('torrentParseError', 'Unknown type: ' + response.content.type));
+
+    return {
+        torrent: response.content,
+        torrentName: await getTorrentName(response.content),
+    };
+}
+
 /**
  * Downloads the torrent from inside the source tab so site cookies are sent along.
+ * Without a usable tab it falls back to fetching from the background page.
  */
-export const fetchTorrent = (url, tabId) => {
-    return new Promise(async (resolve, reject) => {
-        if (tabId === null || await tabExists(tabId) === false) {
-            return reject(new Error(chrome.i18n.getMessage('sourceTabDestroyedError')));
-        }
+export const fetchTorrent = async (url, tabId) => {
+    if (tabId === null || tabId < 0 || await tabExists(tabId) === false)
+        return readTorrentResponse(await fetchInBackground(url));
 
+    const response = await new Promise((resolve) => {
         chrome.tabs.sendMessage(tabId, {
             type: 'fetchTorrent',
             url: url,
-        }, (response) => {
-            if (!response)
-                return reject(new Error(chrome.i18n.getMessage('torrentFetchError', 'No response from page')));
-
-            if (response.error)
-                return reject(new Error(response.error));
-
-            if (!response.ok)
-                return reject(new Error(chrome.i18n.getMessage('torrentFetchError', response.status.toString() + ': ' + response.statusText)));
-
-            if (response.content.type !== '' && !response.content.type.match(/(application\/x-bittorrent|application\/octet-stream)/gi))
-                return reject(new Error(chrome.i18n.getMessage('torrentParseError', 'Unknown type: ' + response.content.type)));
-
-            getTorrentName(response.content).then((name) => resolve({
-                torrent: response.content,
-                torrentName: name,
-            }));
-        });
+        }, resolve);
     });
+
+    // Tabs without the content script (blank tabs, privileged pages) get no response
+    if (!response)
+        return readTorrentResponse(await fetchInBackground(url));
+
+    return readTorrentResponse(response);
+}
+
+const fetchInBackground = async (url) => {
+    try {
+        const response = await fetch(url, {
+            credentials: 'include',
+            headers: new Headers({
+                'accept': 'application/x-bittorrent,application/octet-stream,*/*',
+            }),
+        });
+
+        return {
+            ok: response.ok,
+            status: response.status,
+            statusText: response.statusText,
+            content: await response.blob(),
+        };
+    } catch (e) {
+        return {error: e.message};
+    }
+}
+
+/**
+ * Magnet links reach us through the protocol handler declared in the manifest.
+ */
+export const handleMagnetRequest = (details) => {
+    const magnetUrl = getHandlerMagnetUrl(details.url);
+
+    if (!isConfigured())
+        chrome.runtime.openOptionsPage();
+    else if (magnetUrl)
+        addTorrent(magnetUrl, null);
+
+    return {cancel: true};
+}
+
+/**
+ * Catches clicked links that would download a .torrent file.
+ */
+export const handleTorrentResponse = (details) => {
+    if (!isConfigured() || !options.catchTorrents || details.method !== 'GET' || !isTorrentResponse(details))
+        return;
+
+    addTorrent(details.url, details.tabId);
+
+    return {cancel: true};
 }
 
 /**
@@ -300,6 +356,17 @@ const handleToolbarClick = (tab, clickData) => {
 
 chrome.contextMenus.onClicked.addListener(handleMenuClick);
 chrome.browserAction.onClicked.addListener(handleToolbarClick);
+
+chrome.webRequest.onBeforeRequest.addListener(
+    handleMagnetRequest,
+    {urls: ['https://torrent-control.invalid/*']},
+    ['blocking'],
+);
+chrome.webRequest.onHeadersReceived.addListener(
+    handleTorrentResponse,
+    {urls: ['<all_urls>'], types: ['main_frame', 'sub_frame']},
+    ['blocking', 'responseHeaders'],
+);
 
 chrome.runtime.onMessage.addListener((request) => {
     if (request.type === 'openWebUi')

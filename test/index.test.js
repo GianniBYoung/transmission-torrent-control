@@ -1,3 +1,4 @@
+import sinon from 'sinon';
 import {
     fetchTorrent,
     buildMenuItems,
@@ -46,12 +47,16 @@ describe('fetchTorrent', () => {
         await expectRejection(fetchTorrent('https://example.com/test.torrent', 3), 'NetworkError when attempting to fetch resource.');
     });
 
-    it('No response from page', async () => {
+    it('Falls back to background fetch without a content script', async () => {
+        const testTorrent = await getTestTorrent();
+
         chrome.tabs.get.withArgs(3).yields({});
         chrome.tabs.sendMessage.yields(undefined);
-        chrome.i18n.getMessage.withArgs('torrentFetchError', 'No response from page').returns('no response');
+        const fetch = sinon.stub(global, 'fetch').resolves({ok: true, status: 200, statusText: 'OK', blob: async () => testTorrent});
 
-        await expectRejection(fetchTorrent('https://example.com/test.torrent', 3), 'no response');
+        expect((await fetchTorrent('https://example.com/test.torrent', 3)).torrentName).to.equal('ubuntu-20.04-desktop-amd64.iso');
+        expect(fetch.calledOnceWith('https://example.com/test.torrent')).to.be.true;
+        expect(fetch.firstCall.args[1].credentials).to.equal('include');
     });
 
     it('Not found', async () => {
@@ -80,11 +85,12 @@ describe('fetchTorrent', () => {
         await expectRejection(fetchTorrent('https://example.com/test.torrent', 3), 'Failed to read torrent. (Unknown type: text/html)');
     });
 
-    it('Missing tab', async () => {
+    it('Missing tab falls back to background fetch', async () => {
         chrome.tabs.get.withArgs(4).yields(undefined);
-        chrome.i18n.getMessage.withArgs('sourceTabDestroyedError').returns('gone');
+        sinon.stub(global, 'fetch').rejects(new Error('NetworkError when attempting to fetch resource.'));
 
-        await expectRejection(fetchTorrent('https://example.com/test.torrent', 4), 'gone');
+        await expectRejection(fetchTorrent('https://example.com/test.torrent', 4), 'NetworkError when attempting to fetch resource.');
+        expect(chrome.tabs.sendMessage.notCalled).to.be.true;
     });
 });
 

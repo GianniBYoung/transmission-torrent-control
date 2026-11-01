@@ -94,5 +94,8 @@
   },
   "notConfiguredText": {
     "message": "Set up your Transmission server in Settings."
+  },
+  "catchTorrentsOption": {
+    "message": "Send clicked .torrent files to Transmission"
   }
 }
